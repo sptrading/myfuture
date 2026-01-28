@@ -2,6 +2,7 @@ import requests
 import sqlite3
 import os
 import time
+import threading
 
 from services.instrument_map import INSTRUMENT_MAP
 from services.database import init_db
@@ -19,31 +20,38 @@ def fetch_quotes():
 
     keys = ",".join(INSTRUMENT_MAP.values())
 
-    params = {
-        "instrument_key": keys
-    }
+    params = {"instrument_key": keys}
 
-    res = requests.get(url, headers=headers, params=params)
-    data = res.json()["data"]
+    while True:
+        try:
+            res = requests.get(url, headers=headers, params=params)
+            data = res.json()["data"]
 
-    conn = sqlite3.connect("stocks.db")
-    c = conn.cursor()
+            conn = sqlite3.connect("stocks.db")
+            c = conn.cursor()
 
-    for symbol, key in INSTRUMENT_MAP.items():
-        quote = data.get(key, {})
-        ltp = quote.get("last_price", 0)
-        prev = quote.get("prev_close", 0)
+            for symbol, key in INSTRUMENT_MAP.items():
+                quote = data.get(key, {})
+                ltp = quote.get("last_price", 0)
+                prev = quote.get("prev_close", 0)
 
-        change = ((ltp - prev) / prev) * 100 if prev else 0
+                change = ((ltp - prev) / prev) * 100 if prev else 0
 
-        c.execute('''
-            INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
-            VALUES (?, ?, ?, ?)
-        ''', (symbol, ltp, prev, change))
+                c.execute('''
+                    INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
+                    VALUES (?, ?, ?, ?)
+                ''', (symbol, ltp, prev, change))
 
-    conn.commit()
-    conn.close()
+            conn.commit()
+            conn.close()
 
-while True:
-    fetch_quotes()
-    time.sleep(60)
+            time.sleep(60)
+
+        except Exception as e:
+            print("Error:", e)
+            time.sleep(10)
+
+
+def start_background_fetch():
+    thread = threading.Thread(target=fetch_quotes, daemon=True)
+    thread.start()
