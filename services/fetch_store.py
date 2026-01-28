@@ -8,7 +8,7 @@ from services.instrument_map import INSTRUMENT_MAP
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-_started = False  # 🔥 important guard
+_started = False
 
 
 def fetch_and_store():
@@ -24,7 +24,6 @@ def fetch_and_store():
             conn = sqlite3.connect("stocks.db")
             c = conn.cursor()
 
-            # table create if not exists
             c.execute("""
                 CREATE TABLE IF NOT EXISTS stock_data (
                     symbol TEXT,
@@ -35,7 +34,6 @@ def fetch_and_store():
                 )
             """)
 
-            # clear old data (latest only)
             c.execute("DELETE FROM stock_data")
 
             batch_size = 40
