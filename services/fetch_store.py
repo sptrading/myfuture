@@ -36,8 +36,14 @@ def fetch_quotes():
 
                 print(f"📥 Fetching batch {i} to {i+batch_size}")
 
-                res = requests.get(url, headers=headers, params=params)
-                data = res.json().get("data", {})
+                res = requests.post(
+    url,
+    headers={**headers, "Content-Type": "application/json"},
+    json={"instrument_keys": batch}
+)
+
+data = res.json().get("data", {})
+
 
                 for symbol, key in INSTRUMENT_MAP.items():
                     if key in data:
