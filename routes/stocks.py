@@ -3,7 +3,6 @@ from services.database import get_connection
 
 router = APIRouter()
 
-
 @router.get("/stocks")
 def get_stocks():
     conn = get_connection()
