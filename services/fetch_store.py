@@ -20,42 +20,48 @@ def fetch_quotes():
     url = "https://api.upstox.com/v2/market-quote/quotes"
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
 
-    keys = ",".join(INSTRUMENT_MAP.values())
-    params = {"instrument_key": keys}
+    all_keys = list(INSTRUMENT_MAP.values())
+    batch_size = 40
 
     while True:
         try:
-            print("📥 Fetching quotes from Upstox...")
-
-            res = requests.get(url, headers=headers, params=params)
-            data = res.json().get("data", {})
-
             conn = get_connection()
             c = conn.cursor()
 
-            for symbol, key in INSTRUMENT_MAP.items():
-                quote = data.get(key, {})
+            for i in range(0, len(all_keys), batch_size):
+                batch = all_keys[i:i + batch_size]
+                keys = ",".join(batch)
 
-                # ✅ Correct fields from Upstox response
-                ltp = quote.get("last_price", 0)
-                prev = quote.get("ohlc", {}).get("close", 0)
+                params = {"instrument_keys": keys}
 
-                change = ((ltp - prev) / prev) * 100 if prev else 0
+                print(f"📥 Fetching batch {i} to {i+batch_size}")
 
-                c.execute("""
-                    INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
-                    VALUES (?, ?, ?, ?)
-                """, (symbol, ltp, prev, change))
+                res = requests.get(url, headers=headers, params=params)
+                data = res.json().get("data", {})
+
+                for symbol, key in INSTRUMENT_MAP.items():
+                    if key in data:
+                        quote = data[key]
+
+                        ltp = quote.get("last_price", 0)
+                        prev = quote.get("ohlc", {}).get("close", 0)
+                        change = ((ltp - prev) / prev) * 100 if prev else 0
+
+                        c.execute("""
+                            INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
+                            VALUES (?, ?, ?, ?)
+                        """, (symbol, ltp, prev, change))
 
             conn.commit()
             conn.close()
 
-            print("✅ Data inserted into DB")
+            print("✅ All batches inserted")
             time.sleep(60)
 
         except Exception as e:
-            print("❌ Error in fetch:", e)
+            print("❌ Error:", e)
             time.sleep(10)
+
 
 
 # 👇 file load झाला की background thread सुरू
