@@ -27,8 +27,10 @@ def fetch_quotes():
             res = requests.get(url, headers=headers, params=params)
             data = res.json()["data"]
 
-            conn = sqlite3.connect("stocks.db")
-            c = conn.cursor()
+            conn = from services.database import init_db, get_connection
+
+            conn = get_connection()
+
 
             for symbol, key in INSTRUMENT_MAP.items():
                 quote = data.get(key, {})
