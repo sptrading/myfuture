@@ -7,20 +7,21 @@ from services.database import init_db
 
 app = FastAPI()
 
-# DB तयार होण्यासाठी
+# DB init
 init_db()
 
 
 @app.on_event("startup")
-def start_background_thread():
+def startup_event():
     thread = threading.Thread(target=start_fetch_loop, daemon=True)
     thread.start()
-    print("✅ Background fetch thread started")
+    print("🚀 Background fetch started")
 
 
+# 👇 Render health check साठी IMPORTANT
 @app.get("/")
-def home():
-    return {"status": "running"}
+def root():
+    return {"status": "ok"}
 
 
 @app.get("/stocks")
