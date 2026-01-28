@@ -55,3 +55,10 @@ def fetch_quotes():
 def start_background_fetch():
     thread = threading.Thread(target=fetch_quotes, daemon=True)
     thread.start()
+def start_background_fetch():
+    thread = threading.Thread(target=fetch_quotes, daemon=True)
+    thread.start()
+
+
+# 👇 हे IMPORTANT — file load झाला की thread सुरू
+start_background_fetch()
