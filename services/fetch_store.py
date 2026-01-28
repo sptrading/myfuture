@@ -1,11 +1,10 @@
 import requests
-import sqlite3
 import os
 import time
 import threading
 
 from services.instrument_map import INSTRUMENT_MAP
-from services.database import init_db
+from services.database import init_db, get_connection
 
 print("✅ FETCH_STORE FILE LOADED")
 
@@ -13,24 +12,25 @@ init_db()
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
+
 def fetch_quotes():
     print("🚀 Fetch thread started")
 
     url = "https://api.upstox.com/v2/market-quote/quotes"
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+
     keys = ",".join(INSTRUMENT_MAP.values())
     params = {"instrument_key": keys}
 
     while True:
         try:
-            print("📥 Fetching quotes...")
-            res = requests.get(url, headers=headers, params=params)
-            data = res.json()["data"]
+            print("📥 Fetching quotes from Upstox...")
 
-            conn = from services.database import init_db, get_connection
+            res = requests.get(url, headers=headers, params=params)
+            data = res.json().get("data", {})
 
             conn = get_connection()
-
+            c = conn.cursor()
 
             for symbol, key in INSTRUMENT_MAP.items():
                 quote = data.get(key, {})
@@ -38,21 +38,21 @@ def fetch_quotes():
                 prev = quote.get("prev_close", 0)
                 change = ((ltp - prev) / prev) * 100 if prev else 0
 
-                c.execute('''
+                c.execute("""
                     INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
                     VALUES (?, ?, ?, ?)
-                ''', (symbol, ltp, prev, change))
+                """, (symbol, ltp, prev, change))
 
             conn.commit()
             conn.close()
 
-            print("✅ Data inserted")
+            print("✅ Data inserted into DB")
             time.sleep(60)
 
         except Exception as e:
-            print("❌ Error:", e)
+            print("❌ Error in fetch:", e)
             time.sleep(10)
 
 
-# 👇 thread start
+# 👇 file load झाला की thread सुरू
 threading.Thread(target=fetch_quotes, daemon=True).start()
