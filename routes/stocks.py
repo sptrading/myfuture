@@ -3,6 +3,7 @@ from services.database import get_connection
 
 router = APIRouter()
 
+
 @router.get("/stocks")
 def get_stocks():
     conn = get_connection()
@@ -11,11 +12,8 @@ def get_stocks():
     c.execute("""
         SELECT symbol, ltp, change_percent
         FROM stock_data
-        WHERE rowid IN (
-            SELECT rowid FROM stock_data
-            ORDER BY rowid DESC
-            LIMIT 200
-        )
+        ORDER BY timestamp DESC
+        LIMIT 200
     """)
 
     rows = c.fetchall()
