@@ -1,39 +1,58 @@
 import requests
 import sqlite3
-import os
+import threading
 import time
+import os
 
 from services.instrument_map import INSTRUMENT_MAP
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-URL = "https://api.upstox.com/v2/market-quote/quotes"
-HEADERS = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+_started = False  # 🔥 important guard
 
 
-def start_fetch_loop():
-    print("🚀 Background fetch started")
+def fetch_and_store():
+    url = "https://api.upstox.com/v2/market-quote/quotes"
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}"
+    }
 
-    symbols = list(INSTRUMENT_MAP.items())
+    keys = list(INSTRUMENT_MAP.values())
 
     while True:
         try:
-            conn = from services.database import get_connection
+            conn = sqlite3.connect("stocks.db")
             c = conn.cursor()
 
-            for i in range(0, len(symbols), 40):
-                batch = symbols[i:i+40]
-                keys = ",".join([key for _, key in batch])
+            # table create if not exists
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS stock_data (
+                    symbol TEXT,
+                    ltp REAL,
+                    prev_close REAL,
+                    change_percent REAL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
 
-                params = {"instrument_keys": keys}
-                res = requests.get(URL, headers=HEADERS, params=params)
+            # clear old data (latest only)
+            c.execute("DELETE FROM stock_data")
+
+            batch_size = 40
+            for i in range(0, len(keys), batch_size):
+                batch = keys[i:i+batch_size]
+                params = {"instrument_key": ",".join(batch)}
+
+                print(f"📥 Fetching batch {i} to {i+batch_size}")
+
+                res = requests.get(url, headers=headers, params=params)
                 data = res.json().get("data", {})
 
-                for symbol, key in batch:
-                    if key in data:
-                        quote = data[key]
-                        ltp = quote.get("ltp", 0)
-                        prev = quote.get("cp", 0)
+                for symbol, key in INSTRUMENT_MAP.items():
+                    if key in batch:
+                        quote = data.get(key, {})
+                        ltp = quote.get("last_price", 0)
+                        prev = quote.get("prev_close", 0)
                         change = ((ltp - prev) / prev) * 100 if prev else 0
 
                         c.execute("""
@@ -44,15 +63,13 @@ def start_fetch_loop():
             conn.commit()
             conn.close()
 
-            print("✅ Updated. Sleeping 60s")
+            print("✅ Updated. Sleeping 60s\n")
             time.sleep(60)
 
         except Exception as e:
-            print("Error:", e)
+            print("❌ Error:", e)
             time.sleep(10)
-import threading
 
-_started = False
 
 def start_background_fetch():
     global _started
@@ -62,6 +79,6 @@ def start_background_fetch():
 
     _started = True
 
-    thread = threading.Thread(target=run_fetch_loop, daemon=True)
+    thread = threading.Thread(target=fetch_and_store, daemon=True)
     thread.start()
     print("🚀 Background fetch started")
