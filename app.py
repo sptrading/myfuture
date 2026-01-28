@@ -15,9 +15,7 @@ app.include_router(stocks_router)
 
 
 # Start background Upstox fetch when app starts
-@app.on_event("startup")
-def startup_event():
-    start_background_fetch()
+
 
 
 # Home page
