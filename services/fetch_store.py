@@ -1,8 +1,9 @@
+import requests
+import sqlite3
 import os
 import time
 import threading
 
-from upstox_client import Configuration, ApiClient, MarketQuoteApi
 from services.instrument_map import INSTRUMENT_MAP
 from services.database import init_db, get_connection
 
@@ -12,11 +13,12 @@ init_db()
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-configuration = Configuration()
-configuration.access_token = ACCESS_TOKEN
+URL = "https://api.upstox.com/v2/market-quote/quotes"
 
-api_client = ApiClient(configuration)
-quote_api = MarketQuoteApi(api_client)
+HEADERS = {
+    "Authorization": f"Bearer {ACCESS_TOKEN}",
+    "Content-Type": "application/json"
+}
 
 
 def fetch_quotes():
@@ -29,29 +31,36 @@ def fetch_quotes():
             conn = get_connection()
             c = conn.cursor()
 
-            print("📥 Fetching quotes from Upstox SDK")
+            # 40-40 च्या batch मध्ये
+            for i in range(0, len(keys), 40):
+                batch = keys[i:i+40]
+                print(f"📥 Fetching batch {i} to {i+40}")
 
-            response = quote_api.get_market_quote(keys)
+                res = requests.post(
+                    URL,
+                    headers=HEADERS,
+                    json={"instrument_key": batch}   # ⚠️ singular
+                )
 
-            data = response.data
+                data = res.json().get("data", {})
 
-            for symbol, key in INSTRUMENT_MAP.items():
-                if key in data:
-                    quote = data[key]
+                for symbol, key in INSTRUMENT_MAP.items():
+                    if key in data:
+                        quote = data[key]
 
-                    ltp = quote.ltp
-                    prev = quote.close_price
-                    change = ((ltp - prev) / prev) * 100 if prev else 0
+                        ltp = quote.get("last_price", 0)
+                        prev = quote.get("prev_close", 0)
+                        change = ((ltp - prev) / prev) * 100 if prev else 0
 
-                    c.execute("""
-                        INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
-                        VALUES (?, ?, ?, ?)
-                    """, (symbol, ltp, prev, change))
+                        c.execute("""
+                            INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
+                            VALUES (?, ?, ?, ?)
+                        """, (symbol, ltp, prev, change))
 
             conn.commit()
             conn.close()
 
-            print("✅ Data inserted. Sleeping 60s\n")
+            print("✅ All batches inserted. Sleeping 60s\n")
             time.sleep(60)
 
         except Exception as e:
