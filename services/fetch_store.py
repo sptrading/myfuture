@@ -8,6 +8,7 @@ from services.database import init_db, get_connection
 
 print("✅ FETCH_STORE FILE LOADED")
 
+# DB table तयार
 init_db()
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
@@ -34,8 +35,11 @@ def fetch_quotes():
 
             for symbol, key in INSTRUMENT_MAP.items():
                 quote = data.get(key, {})
+
+                # ✅ Correct fields from Upstox response
                 ltp = quote.get("last_price", 0)
-                prev = quote.get("prev_close", 0)
+                prev = quote.get("ohlc", {}).get("close", 0)
+
                 change = ((ltp - prev) / prev) * 100 if prev else 0
 
                 c.execute("""
@@ -54,5 +58,5 @@ def fetch_quotes():
             time.sleep(10)
 
 
-# 👇 file load झाला की thread सुरू
+# 👇 file load झाला की background thread सुरू
 threading.Thread(target=fetch_quotes, daemon=True).start()
