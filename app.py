@@ -3,14 +3,21 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from routes.stocks import router as stocks_router
+from services.fetch_store import start_background_fetch
 
 app = FastAPI()
 
-# Templates setup
+# Templates
 templates = Jinja2Templates(directory="templates")
 
 # Routers
 app.include_router(stocks_router)
+
+
+# Start background Upstox fetch when app starts
+@app.on_event("startup")
+def startup_event():
+    start_background_fetch()
 
 
 # Home page
