@@ -8,7 +8,6 @@ from services.database import init_db, get_connection
 
 print("✅ FETCH_STORE FILE LOADED")
 
-# DB table तयार
 init_db()
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
@@ -18,10 +17,13 @@ def fetch_quotes():
     print("🚀 Fetch thread started")
 
     url = "https://api.upstox.com/v2/market-quote/quotes"
-    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
 
     all_keys = list(INSTRUMENT_MAP.values())
-    batch_size = 40
+    batch_size = 40  # Upstox safe limit
 
     while True:
         try:
@@ -30,20 +32,17 @@ def fetch_quotes():
 
             for i in range(0, len(all_keys), batch_size):
                 batch = all_keys[i:i + batch_size]
-                keys = ",".join(batch)
-
-                params = {"instrument_keys": keys}
 
                 print(f"📥 Fetching batch {i} to {i+batch_size}")
 
+                # ✅ CORRECT Upstox call (POST + JSON body)
                 res = requests.post(
-    url,
-    headers={**headers, "Content-Type": "application/json"},
-    json={"instrument_keys": batch}
-)
+                    url,
+                    headers=headers,
+                    json={"instrument_keys": batch}
+                )
 
-data = res.json().get("data", {})
-
+                data = res.json().get("data", {})
 
                 for symbol, key in INSTRUMENT_MAP.items():
                     if key in data:
@@ -69,6 +68,5 @@ data = res.json().get("data", {})
             time.sleep(10)
 
 
-
-# 👇 file load झाला की background thread सुरू
+# 👇 file load झाला की thread सुरू
 threading.Thread(target=fetch_quotes, daemon=True).start()
