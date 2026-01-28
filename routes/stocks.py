@@ -1,11 +1,11 @@
 from fastapi import APIRouter
-import sqlite3
+from services.database import get_connection
 
 router = APIRouter()
 
 @router.get("/stocks")
 def get_stocks():
-    conn = sqlite3.connect("stocks.db")
+    conn = get_connection()
     c = conn.cursor()
 
     c.execute("""
