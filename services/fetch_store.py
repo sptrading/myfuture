@@ -50,3 +50,18 @@ def start_fetch_loop():
         except Exception as e:
             print("Error:", e)
             time.sleep(10)
+import threading
+
+_started = False
+
+def start_background_fetch():
+    global _started
+
+    if _started:
+        return
+
+    _started = True
+
+    thread = threading.Thread(target=run_fetch_loop, daemon=True)
+    thread.start()
+    print("🚀 Background fetch started")
