@@ -3,7 +3,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from routes.stocks import router as stocks_router
-from services.fetch_store import start_background_fetch
 
 app = FastAPI()
 
