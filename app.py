@@ -14,3 +14,14 @@ app.include_router(stocks_router)
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+from fastapi import FastAPI
+import threading
+
+from services.fetch_store import start_fetch_loop
+
+app = FastAPI()
+
+@app.on_event("startup")
+def start_background_thread():
+    thread = threading.Thread(target=start_fetch_loop, daemon=True)
+    thread.start()
