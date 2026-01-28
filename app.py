@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from stocks import router as stocks_router
-from fetch_store import start_background_fetch
+from services.fetch_store import start_background_fetch
 
 app = FastAPI()
 
