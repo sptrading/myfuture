@@ -40,3 +40,8 @@ def get_stocks():
     conn.close()
 
     return rows
+from fetch_store import start_background_fetch
+
+@app.on_event("startup")
+def startup_event():
+    start_background_fetch()
