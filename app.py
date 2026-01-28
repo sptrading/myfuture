@@ -1,16 +1,20 @@
 from fastapi import FastAPI
-from routes.stocks import router as stocks_router
-from services.fetch_store import start_fetch_loop
-import threading
+import os
+
+from services.fetch_store import start_background_fetch
+from services.stocks import router as stocks_router
 
 app = FastAPI()
 
 app.include_router(stocks_router)
 
+
 @app.get("/")
-def root():
+def home():
     return {"status": "ok"}
 
+
+# 🔥 VERY IMPORTANT — run only once
 @app.on_event("startup")
 def startup_event():
-    threading.Thread(target=start_fetch_loop, daemon=True).start()
+    start_background_fetch()
