@@ -18,7 +18,7 @@ def start_fetch_loop():
 
     while True:
         try:
-            conn = sqlite3.connect("stocks.db")
+            conn = from services.database import get_connection
             c = conn.cursor()
 
             for i in range(0, len(symbols), 40):
