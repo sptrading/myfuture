@@ -45,17 +45,17 @@ def fetch_quotes():
                 data = res.json().get("data", {})
 
                 for symbol, key in INSTRUMENT_MAP.items():
-                    if key in data:
-                        quote = data[key]
+    if key in data:
+        quote = data[key]
 
-                        ltp = quote.get("last_price", 0)
-                        prev = quote.get("prev_close", 0)
-                        change = ((ltp - prev) / prev) * 100 if prev else 0
+        ltp = quote.get("ltp", 0)
+        prev = quote.get("cp", 0)
+        change = ((ltp - prev) / prev) * 100 if prev else 0
 
-                        c.execute("""
-                            INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
-                            VALUES (?, ?, ?, ?)
-                        """, (symbol, ltp, prev, change))
+        c.execute("""
+            INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
+            VALUES (?, ?, ?, ?)
+        """, (symbol, ltp, prev, change))
 
             conn.commit()
             conn.close()
