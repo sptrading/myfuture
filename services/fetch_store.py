@@ -9,7 +9,6 @@ from services.database import init_db, get_connection
 print("✅ FETCH_STORE FILE LOADED")
 
 init_db()
-
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
 
@@ -23,7 +22,7 @@ def fetch_quotes():
     }
 
     all_keys = list(INSTRUMENT_MAP.values())
-    batch_size = 40  # Upstox safe limit
+    batch_size = 40
 
     while True:
         try:
@@ -32,7 +31,6 @@ def fetch_quotes():
 
             for i in range(0, len(all_keys), batch_size):
                 batch = all_keys[i:i + batch_size]
-
                 print(f"📥 Fetching batch {i} to {i+batch_size}")
 
                 res = requests.post(
@@ -41,14 +39,16 @@ def fetch_quotes():
                     json={"instrument_keys": batch}
                 )
 
-                data = res.json().get("data", {})
+                result = res.json()
+                data = result.get("data", {})
 
                 for symbol, key in INSTRUMENT_MAP.items():
                     if key in data:
                         quote = data[key]
 
-                        ltp = quote.get("last_price", 0)
-                        prev = quote.get("ohlc", {}).get("close", 0)
+                        ltp = quote.get("ltp", 0)
+                        prev = quote.get("close_price", 0)
+
                         change = ((ltp - prev) / prev) * 100 if prev else 0
 
                         c.execute("""
@@ -56,18 +56,17 @@ def fetch_quotes():
                             VALUES (?, ?, ?, ?)
                         """, (symbol, ltp, prev, change))
 
-                time.sleep(1)  # 🔥 batch gap (important)
+                time.sleep(1)
 
             conn.commit()
             conn.close()
 
             print("✅ One full cycle done. Sleeping 60s...\n")
-            time.sleep(60)  # 🔥 cycle gap (important)
+            time.sleep(60)
 
         except Exception as e:
             print("❌ Error:", e)
             time.sleep(10)
 
 
-# 👇 file load झाला की thread सुरू
 threading.Thread(target=fetch_quotes, daemon=True).start()
