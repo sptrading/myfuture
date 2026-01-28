@@ -35,7 +35,6 @@ def fetch_quotes():
 
                 print(f"📥 Fetching batch {i} to {i+batch_size}")
 
-                # ✅ CORRECT Upstox call (POST + JSON body)
                 res = requests.post(
                     url,
                     headers=headers,
@@ -57,11 +56,13 @@ def fetch_quotes():
                             VALUES (?, ?, ?, ?)
                         """, (symbol, ltp, prev, change))
 
+                time.sleep(1)  # 🔥 batch gap (important)
+
             conn.commit()
             conn.close()
 
-            print("✅ All batches inserted")
-            time.sleep(60)
+            print("✅ One full cycle done. Sleeping 60s...\n")
+            time.sleep(60)  # 🔥 cycle gap (important)
 
         except Exception as e:
             print("❌ Error:", e)
