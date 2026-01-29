@@ -1,4 +1,3 @@
-# services/fetch_store.py
 import requests
 import os
 from services.database import get_connection
