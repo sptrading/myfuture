@@ -8,15 +8,10 @@ from services.instrument_map import INSTRUMENT_MAP
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-_started = False
-
-
 def fetch_and_store():
-    url = "https://api.upstox.com/v2/market-quote/ltp"
-
+    url = "https://api.upstox.com/v2/market-quote/quotes"
     headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}",
-        "Accept": "application/json"
+        "Authorization": f"Bearer {ACCESS_TOKEN}"
     }
 
     keys = list(INSTRUMENT_MAP.values())
@@ -26,7 +21,6 @@ def fetch_and_store():
             conn = sqlite3.connect("stocks.db")
             c = conn.cursor()
 
-            # Table create
             c.execute("""
                 CREATE TABLE IF NOT EXISTS stock_data (
                     symbol TEXT,
@@ -40,28 +34,22 @@ def fetch_and_store():
             c.execute("DELETE FROM stock_data")
 
             batch_size = 50
-
             for i in range(0, len(keys), batch_size):
-                batch = keys[i:i + batch_size]
+                batch = keys[i:i+batch_size]
+                params = {"instrument_key": ",".join(batch)}
 
-                params = {
-                    "instrument_key": ",".join(batch)
-                }
-
-                print(f"📥 Fetching batch {i} to {i+batch_size}")
-
-                res = requests.get(url, headers=headers, params=params, timeout=15)
+                res = requests.get(url, headers=headers, params=params)
                 data = res.json().get("data", {})
 
                 for symbol, key in INSTRUMENT_MAP.items():
-                    if key in batch:
-                        quote = data.get(key, {})
+                    if key in data:
+                        quote = data[key]
 
-                        ltp = quote.get("last_price", 0)
+                        # ✅ CORRECT KEYS FROM UPSTOX
+                        ltp = quote.get("ltp", 0)
+                        prev = quote.get("close", 0)
 
-                        # prev_close मिळत नाही ltp endpoint मधून
-                        prev = 0
-                        change = 0
+                        change = ((ltp - prev) / prev) * 100 if prev else 0
 
                         c.execute("""
                             INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
@@ -71,7 +59,7 @@ def fetch_and_store():
             conn.commit()
             conn.close()
 
-            print("✅ Updated. Sleeping 60s\n")
+            print("✅ Updated. Sleeping 60s")
             time.sleep(60)
 
         except Exception as e:
@@ -80,13 +68,6 @@ def fetch_and_store():
 
 
 def start_background_fetch():
-    global _started
-
-    if _started:
-        return
-
-    _started = True
-
     thread = threading.Thread(target=fetch_and_store, daemon=True)
     thread.start()
     print("🚀 Background fetch started")
