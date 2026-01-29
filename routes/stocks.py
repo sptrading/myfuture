@@ -1,6 +1,5 @@
-# routes/stocks.py
 from fastapi import APIRouter
-from database import get_connection
+from services.database import get_connection
 
 router = APIRouter()
 
