@@ -1,21 +1,26 @@
+# routes/stocks.py
 from fastapi import APIRouter
-from services.database import get_connection
+from database import get_connection
 
 router = APIRouter()
 
 @router.get("/stocks")
 def get_stocks():
     conn = get_connection()
-    c = conn.cursor()
+    cursor = conn.cursor()
 
-    c.execute("""
+    cursor.execute("""
         SELECT symbol, ltp, change_percent
-        FROM stock_data
+        FROM stocks
+        GROUP BY symbol
         ORDER BY timestamp DESC
         LIMIT 200
     """)
 
-    rows = c.fetchall()
+    rows = cursor.fetchall()
     conn.close()
 
-    return rows
+    return [
+        {"symbol": r[0], "ltp": r[1], "change_percent": r[2]}
+        for r in rows
+    ]
