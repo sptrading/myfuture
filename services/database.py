@@ -1,4 +1,4 @@
-# database.py
+# services/database.py
 import sqlite3
 import os
 
