@@ -17,8 +17,9 @@ def fetch_and_store():
         "Authorization": f"Bearer {ACCESS_TOKEN}"
     }
 
-    # ✅ Correct instrument format for Upstox
-    keys = [f"NSE_EQ|{k}" for k in INSTRUMENT_MAP.values()]
+    # reverse map: instrument_key -> symbol
+    REVERSE_MAP = {v: k for k, v in INSTRUMENT_MAP.items()}
+    keys = list(REVERSE_MAP.keys())
 
     while True:
         try:
@@ -39,7 +40,7 @@ def fetch_and_store():
 
             batch_size = 40
             for i in range(0, len(keys), batch_size):
-                batch = keys[i:i+batch_size]
+                batch = keys[i:i + batch_size]
                 params = {"instrument_key": ",".join(batch)}
 
                 print(f"📥 Fetching batch {i} to {i+batch_size}")
@@ -47,21 +48,21 @@ def fetch_and_store():
                 res = requests.get(url, headers=headers, params=params)
                 data = res.json().get("data", {})
 
-                for symbol, isin in INSTRUMENT_MAP.items():
-                    key = f"NSE_EQ|{isin}"
+                # ✅ correct parsing — loop on Upstox response
+                for key, quote in data.items():
+                    symbol = REVERSE_MAP.get(key)
 
-                    if key in batch:
-                        quote = data.get(key, {})
+                    if not symbol:
+                        continue
 
-                        ltp = quote.get("last_price", 0)
-                        prev = quote.get("prev_close", 0)
+                    ltp = quote.get("last_price", 0)
+                    prev = quote.get("prev_close", 0)
+                    change = ((ltp - prev) / prev) * 100 if prev else 0
 
-                        change = ((ltp - prev) / prev) * 100 if prev else 0
-
-                        c.execute("""
-                            INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
-                            VALUES (?, ?, ?, ?)
-                        """, (symbol, ltp, prev, change))
+                    c.execute("""
+                        INSERT INTO stock_data (symbol, ltp, prev_close, change_percent)
+                        VALUES (?, ?, ?, ?)
+                    """, (symbol, ltp, prev, change))
 
             conn.commit()
             conn.close()
