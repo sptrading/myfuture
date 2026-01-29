@@ -1,8 +1,6 @@
-# runner.py
 import time
 from services.fetch_store import fetch_and_store
 
-# तुझ्या instruments list इथे टाक (200+)
 instrument_keys = [
     "NSE_EQ|INE466L01038",
     "NSE_EQ|INE117A01022",
