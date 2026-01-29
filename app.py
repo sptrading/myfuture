@@ -4,6 +4,7 @@ from services.fetch_store import start_background_fetch
 
 app = FastAPI()
 
+# Include routes
 app.include_router(stocks_router)
 
 @app.on_event("startup")
@@ -12,5 +13,5 @@ def startup_event():
 
 
 @app.get("/")
-def root():
+def home():
     return {"status": "ok"}
