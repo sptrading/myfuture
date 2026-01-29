@@ -17,7 +17,8 @@ def fetch_and_store():
         "Authorization": f"Bearer {ACCESS_TOKEN}"
     }
 
-    keys = list(INSTRUMENT_MAP.values())
+    # ✅ Correct instrument format for Upstox
+    keys = [f"NSE_EQ|{k}" for k in INSTRUMENT_MAP.values()]
 
     while True:
         try:
@@ -46,11 +47,15 @@ def fetch_and_store():
                 res = requests.get(url, headers=headers, params=params)
                 data = res.json().get("data", {})
 
-                for symbol, key in INSTRUMENT_MAP.items():
+                for symbol, isin in INSTRUMENT_MAP.items():
+                    key = f"NSE_EQ|{isin}"
+
                     if key in batch:
                         quote = data.get(key, {})
+
                         ltp = quote.get("last_price", 0)
                         prev = quote.get("prev_close", 0)
+
                         change = ((ltp - prev) / prev) * 100 if prev else 0
 
                         c.execute("""
