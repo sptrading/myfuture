@@ -46,8 +46,8 @@ def fetch_and_store():
                         quote = data[key]
 
                         # ✅ CORRECT KEYS FROM UPSTOX
-                        ltp = quote.get("ltp", 0)
-                        prev = quote.get("close", 0)
+                        ltp = quote.get("ltp")
+                        prev = quote.get("close")
 
                         change = ((ltp - prev) / prev) * 100 if prev else 0
 
