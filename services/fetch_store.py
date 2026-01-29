@@ -1,7 +1,7 @@
-# fetch_store.py
+# services/fetch_store.py
 import requests
 import os
-from database import get_connection
+from services.database import get_connection
 
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
